@@ -26,6 +26,7 @@ type CustomerClient interface {
 	SubscribeNotification(ctx context.Context, in *SubscribeNotificationRequest, opts ...grpc.CallOption) (Customer_SubscribeNotificationClient, error)
 	SumNumbers(ctx context.Context, opts ...grpc.CallOption) (Customer_SumNumbersClient, error)
 	Chat(ctx context.Context, opts ...grpc.CallOption) (Customer_ChatClient, error)
+	MakePayment(ctx context.Context, in *MakePaymentRequest, opts ...grpc.CallOption) (*MakePaymentResponse, error)
 }
 
 type customerClient struct {
@@ -142,6 +143,15 @@ func (x *customerChatClient) Recv() (*ChatResponse, error) {
 	return m, nil
 }
 
+func (c *customerClient) MakePayment(ctx context.Context, in *MakePaymentRequest, opts ...grpc.CallOption) (*MakePaymentResponse, error) {
+	out := new(MakePaymentResponse)
+	err := c.cc.Invoke(ctx, "/customer.v1.Customer/MakePayment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CustomerServer is the server API for Customer service.
 // All implementations must embed UnimplementedCustomerServer
 // for forward compatibility
@@ -150,6 +160,7 @@ type CustomerServer interface {
 	SubscribeNotification(*SubscribeNotificationRequest, Customer_SubscribeNotificationServer) error
 	SumNumbers(Customer_SumNumbersServer) error
 	Chat(Customer_ChatServer) error
+	MakePayment(context.Context, *MakePaymentRequest) (*MakePaymentResponse, error)
 	mustEmbedUnimplementedCustomerServer()
 }
 
@@ -168,6 +179,9 @@ func (UnimplementedCustomerServer) SumNumbers(Customer_SumNumbersServer) error {
 }
 func (UnimplementedCustomerServer) Chat(Customer_ChatServer) error {
 	return status.Errorf(codes.Unimplemented, "method Chat not implemented")
+}
+func (UnimplementedCustomerServer) MakePayment(context.Context, *MakePaymentRequest) (*MakePaymentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MakePayment not implemented")
 }
 func (UnimplementedCustomerServer) mustEmbedUnimplementedCustomerServer() {}
 
@@ -273,6 +287,24 @@ func (x *customerChatServer) Recv() (*ChatRequest, error) {
 	return m, nil
 }
 
+func _Customer_MakePayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MakePaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CustomerServer).MakePayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/customer.v1.Customer/MakePayment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CustomerServer).MakePayment(ctx, req.(*MakePaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Customer_ServiceDesc is the grpc.ServiceDesc for Customer service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -283,6 +315,10 @@ var Customer_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Register",
 			Handler:    _Customer_Register_Handler,
+		},
+		{
+			MethodName: "MakePayment",
+			Handler:    _Customer_MakePayment_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

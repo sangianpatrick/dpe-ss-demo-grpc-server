@@ -58,6 +58,14 @@ message ChatResponse {
   google.protobuf.Timestamp created_at = 3;
 }
 
+message MakePaymentRequest{
+  int64 order_id = 1;
+}
+
+message MakePaymentResponse{
+  string reference_number = 1;
+  google.protobuf.Timestamp payment_date = 2;
+}
 
 
 service Customer {
@@ -65,4 +73,5 @@ service Customer {
   rpc SubscribeNotification(SubscribeNotificationRequest) returns (stream Notification) {}
   rpc SumNumbers(stream SumNumbersRequest) returns (SumNumbersResponse) {}
   rpc Chat(stream ChatRequest) returns (stream ChatResponse) {}
+  rpc MakePayment(MakePaymentRequest) returns (MakePaymentResponse) {}
 }

@@ -10,7 +10,9 @@ import (
 	customerpb "github.com/sangianpatrick/dpe-ss-demo-grpc-server/pb/customer"
 	"github.com/sangianpatrick/dpe-ss-demo-grpc-server/repository"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -164,4 +166,28 @@ func (s *CustomerService) Chat(stream customerpb.Customer_ChatServer) (err error
 		}
 	}
 	return
+}
+
+func (s *CustomerService) MakePayment(ctx context.Context, req *customerpb.MakePaymentRequest) (resp *customerpb.MakePaymentResponse, err error) {
+	_, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	if req.OrderId%5 == 0 {
+		grpc.SetTrailer(ctx, metadata.Pairs("status", "INSUFFICIENT_BALANCE"))
+		err = status.Error(codes.Aborted, "cannot proceed the payment due to insufficient balance")
+	}
+
+	resp = &customerpb.MakePaymentResponse{
+		ReferenceNumber: generateReferenceNumber(),
+		PaymentDate:     timestamppb.New(time.Now()),
+	}
+
+	return
+}
+
+func generateReferenceNumber() string {
+	now := time.Now()
+	referenceNumber := fmt.Sprintf("REF%d", now.Unix())
+
+	return referenceNumber
 }
