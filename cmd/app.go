@@ -7,6 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/sangianpatrick/dpe-ss-demo-grpc-server/config"
 	"github.com/sangianpatrick/dpe-ss-demo-grpc-server/database"
 	customerpb "github.com/sangianpatrick/dpe-ss-demo-grpc-server/pb/customer"
@@ -29,7 +32,20 @@ func main() {
 	accountRepository := repository.NewAccountRepository(logger, db)
 	customerService := service.NewCustomerService(cfg.Application.Location, logger, accountRepository)
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			grpc_middleware.ChainUnaryServer(
+				grpc_logrus.UnaryServerInterceptor(logrus.NewEntry(logger)),
+				grpc_recovery.UnaryServerInterceptor(),
+			),
+		),
+		grpc.ChainStreamInterceptor(
+			grpc_middleware.ChainStreamServer(
+				grpc_logrus.StreamServerInterceptor(logrus.NewEntry(logger)),
+				grpc_recovery.StreamServerInterceptor(),
+			),
+		),
+	)
 	customerpb.RegisterCustomerServer(server, customerService)
 	reflection.Register(server)
 

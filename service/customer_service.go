@@ -175,6 +175,7 @@ func (s *CustomerService) MakePayment(ctx context.Context, req *customerpb.MakeP
 	if req.OrderId%5 == 0 {
 		grpc.SetTrailer(ctx, metadata.Pairs("status", "INSUFFICIENT_BALANCE"))
 		err = status.Error(codes.Aborted, "cannot proceed the payment due to insufficient balance")
+		return
 	}
 
 	resp = &customerpb.MakePaymentResponse{
