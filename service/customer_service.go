@@ -5,34 +5,78 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sangianpatrick/dpe-ss-demo-grpc-server/entity"
+	"github.com/sangianpatrick/dpe-ss-demo-grpc-server/exception"
 	customerpb "github.com/sangianpatrick/dpe-ss-demo-grpc-server/pb/customer"
+	"github.com/sangianpatrick/dpe-ss-demo-grpc-server/repository"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type CustomerService struct {
 	*customerpb.UnimplementedCustomerServer
-	logger *logrus.Logger
+	location   *time.Location
+	logger     *logrus.Logger
+	repository repository.AccountRepository
 }
 
-func NewCustomerService(logger *logrus.Logger) *CustomerService {
-	return &CustomerService{&customerpb.UnimplementedCustomerServer{}, logger}
+func NewCustomerService(location *time.Location, logger *logrus.Logger, repository repository.AccountRepository) *CustomerService {
+	return &CustomerService{&customerpb.UnimplementedCustomerServer{}, location, logger, repository}
 }
 
 func (s *CustomerService) Register(ctx context.Context, req *customerpb.AccountRegistrationRequest) (resp *customerpb.AccountRegistrationResponse, err error) {
-	_, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()
 
 	resp = new(customerpb.AccountRegistrationResponse)
+	_, err = s.repository.FindByEmail(ctx, req.Email)
+	if err == nil {
+		return nil, status.Error(codes.AlreadyExists, "account is already registered")
+	}
 
-	account := new(customerpb.Account)
-	account.Id = 1
-	account.Email = req.Email
-	account.Name = req.Name
-	account.CreatedAt = timestamppb.New(time.Now())
-	account.UpdatedAt = nil
+	if err != exception.ErrNotFound {
+		if err == exception.ErrTimeout {
+			return nil, status.Error(codes.DeadlineExceeded, err.Error())
+		}
 
-	resp.Account = account
+		if err == exception.ErrCancel {
+			return nil, status.Error(codes.Canceled, err.Error())
+		}
+
+		return nil, status.Error(codes.Internal, "an error occured while creating new account")
+	}
+
+	account := entity.Account{
+		Email:     req.Email,
+		Password:  req.Password,
+		Name:      req.Name,
+		CreatedAt: time.Now().In(s.location),
+	}
+
+	id, err := s.repository.Save(ctx, account)
+	if err != nil {
+		if err == exception.ErrTimeout {
+			return nil, status.Error(codes.DeadlineExceeded, err.Error())
+		}
+
+		if err == exception.ErrCancel {
+			return nil, status.Error(codes.Canceled, err.Error())
+		}
+
+		return nil, status.Error(codes.Internal, "an error occured while creating new account")
+	}
+
+	account.Id = id
+
+	resp = new(customerpb.AccountRegistrationResponse)
+	resp.Account = &customerpb.Account{
+		Id:        account.Id,
+		Email:     account.Email,
+		Name:      account.Name,
+		CreatedAt: timestamppb.New(account.CreatedAt),
+	}
 
 	return
 }

@@ -8,7 +8,9 @@ import (
 	"syscall"
 
 	"github.com/sangianpatrick/dpe-ss-demo-grpc-server/config"
+	"github.com/sangianpatrick/dpe-ss-demo-grpc-server/database"
 	customerpb "github.com/sangianpatrick/dpe-ss-demo-grpc-server/pb/customer"
+	"github.com/sangianpatrick/dpe-ss-demo-grpc-server/repository"
 	"github.com/sangianpatrick/dpe-ss-demo-grpc-server/service"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -22,7 +24,10 @@ func main() {
 	logger.SetFormatter(cfg.LogFormatter)
 	logger.SetReportCaller(true)
 
-	customerService := service.NewCustomerService(logger)
+	db := database.GetDatabase()
+
+	accountRepository := repository.NewAccountRepository(logger, db)
+	customerService := service.NewCustomerService(cfg.Application.Location, logger, accountRepository)
 
 	server := grpc.NewServer()
 	customerpb.RegisterCustomerServer(server, customerService)
