@@ -45,4 +45,7 @@ func main() {
 	<-sigterm
 
 	server.GracefulStop()
+	db.Close()
+
+	logger.Info("shutdown application")
 }
