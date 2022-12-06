@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package customer.v1;
+
+option go_package = "github.com/sangianpatrick/dpe-ss-demo-grpc-server/pb/customer;customerpb";
+
+import "google/protobuf/timestamp.proto";
+
+message Account {
+  int64 id = 1;
+  string email = 2;
+  string name = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message Notification {
+  int64 id = 1;
+  string topic = 2;
+  string message = 3;
+}
+
+message AccountRegistrationRequest {
+  string email = 1;
+  string password = 2;
+  string name = 3;
+}
+
+message AccountRegistrationResponse {
+  Account account = 1;
+}
+
+message SubscribeNotificationRequest {
+  string topic = 1;
+}
+
+message SubscribeNotificationResponse {
+  Notification notification = 1;
+}
+
+message SumNumbersRequest {
+  int64 input = 1;
+}
+
+message SumNumbersResponse {
+  int64 aggregate = 1;
+}
+
+message ChatRequest {
+  int64 recepient_id = 1;
+  string message = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+message ChatResponse {
+  int64 sender_id = 1;
+  string message = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+
+
+service Customer {
+  rpc Register(AccountRegistrationRequest) returns (AccountRegistrationResponse) {}
+  rpc SubscribeNotification(SubscribeNotificationRequest) returns (stream Notification) {}
+  rpc SumNumbers(stream SumNumbersRequest) returns (SumNumbersResponse) {}
+  rpc Chat(stream ChatRequest) returns (stream ChatResponse) {}
+}
